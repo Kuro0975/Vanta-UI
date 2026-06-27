@@ -153,12 +153,14 @@ Size = size,
 Position = UDim2.new(0.5, 0, 0.5, 0),
 AnchorPoint = Vector2.new(0.5, 0.5),
 BackgroundColor3 = ThemeManager.GetColor("Background"),
+BackgroundTransparency = 0.15, 
 BorderSizePixel = 0,
 Parent = gui
 }, {
 Creator.New("UICorner", { CornerRadius = ThemeManager.GetColor("CornerRadius") }),
 Creator.New("UIStroke", {
 Color = ThemeManager.GetColor("Stroke"),
+Transparency = 0.5, 
 Thickness = 1
 })
 })
@@ -167,6 +169,7 @@ local sidebar = Creator.New("Frame", {
 Name = "Sidebar",
 Size = UDim2.new(0, 200, 1, 0),
 BackgroundColor3 = ThemeManager.GetColor("Sidebar"),
+BackgroundTransparency = 0.3, 
 BorderSizePixel = 0,
 Parent = mainFrame
 }, {
@@ -176,6 +179,7 @@ Name = "CornerHider",
 Size = UDim2.new(0, 10, 1, 0),
 Position = UDim2.new(1, -10, 0, 0),
 BackgroundColor3 = ThemeManager.GetColor("Sidebar"),
+BackgroundTransparency = 0.3,
 BorderSizePixel = 0
 })
 })
@@ -193,6 +197,7 @@ Size = UDim2.new(0, 40, 0, 40),
 Position = UDim2.new(0, 15, 0.5, 0),
 AnchorPoint = Vector2.new(0, 0.5),
 Image = options.Profile.Image or "",
+ScaleType = Enum.ScaleType.Crop,
 BackgroundTransparency = 1,
 Parent = profileArea
 }, {
@@ -238,10 +243,14 @@ Size = UDim2.new(0, 250, 0, 30),
 Position = UDim2.new(0, 20, 0.5, 0),
 AnchorPoint = Vector2.new(0, 0.5),
 BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
+BackgroundTransparency = 0.5, 
 Parent = topbar
 }, {
 Creator.New("UICorner", { CornerRadius = UDim.new(0, 6) }),
-Creator.New("UIStroke", { Color = ThemeManager.GetColor("Stroke") })
+Creator.New("UIStroke", { 
+Color = ThemeManager.GetColor("Stroke"),
+Transparency = 0.5
+})
 })
 ThemeManager.Register(searchBarContainer, "BackgroundColor3", "ElementBackground")
 local searchBox = Creator.New("TextBox", {
@@ -284,6 +293,69 @@ TextXAlignment = Enum.TextXAlignment.Left,
 Parent = footer
 })
 ThemeManager.Register(footerText, "TextColor3", "SubText")
+local minimizeButton = Creator.New("TextButton", {
+Size = UDim2.new(0, 30, 0, 30),
+Position = UDim2.new(1, -40, 0.5, 0),
+AnchorPoint = Vector2.new(0, 0.5),
+BackgroundTransparency = 1,
+Text = "-",
+TextColor3 = ThemeManager.GetColor("SubText"),
+Font = Enum.Font.Code,
+TextSize = 20,
+Parent = topbar
+})
+ThemeManager.Register(minimizeButton, "TextColor3", "SubText")
+local minimized = false
+local tweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+minimizeButton.MouseButton1Click:Connect(function()
+minimized = not minimized
+if minimized then
+tweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, mainFrame.Size.X.Offset, 0, 50)}):Play()
+sidebar.Visible = false
+contentArea.Visible = false
+footer.Visible = false
+else
+tweenService:Create(mainFrame, tweenInfo, {Size = size}):Play()
+sidebar.Visible = true
+contentArea.Visible = true
+footer.Visible = true
+end
+end)
+local dragging
+local dragInput
+local dragStart
+local startPos
+local function update(input)
+local delta = input.Position - dragStart
+mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+topbar.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = mainFrame.Position
+local inputChanged
+local inputEnded
+inputChanged = input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then
+dragging = false
+inputChanged:Disconnect()
+if inputEnded then inputEnded:Disconnect() end
+end
+end)
+end
+end)
+topbar.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+dragInput = input
+end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+if input == dragInput and dragging then
+update(input)
+end
+end)
 local WindowObj = {
 GUI = gui,
 MainFrame = mainFrame,
@@ -306,7 +378,7 @@ local name = options.Name or "Button"
 local callback = options.Callback or function() end
 local buttonFrame = Creator.New("TextButton", {
 Name = "Button_" .. name,
-Size = UDim2.new(1, 0, 0, 35),
+Size = UDim2.new(1, 0, 0, 26),
 BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
 AutoButtonColor = false,
 Text = "",
@@ -410,7 +482,7 @@ local callback = options.Callback or function() end
 local isOpen = false
 local dropdownFrame = Creator.New("Frame", {
 Name = "Dropdown_" .. name,
-Size = UDim2.new(1, 0, 0, 40),
+Size = UDim2.new(1, 0, 0, 30),
 BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
 Parent = sectionObj.Container,
 ClipsDescendants = true
@@ -423,7 +495,7 @@ Thickness = 1
 })
 ThemeManager.Register(dropdownFrame, "BackgroundColor3", "ElementBackground")
 local toggleButton = Creator.New("TextButton", {
-Size = UDim2.new(1, 0, 0, 40),
+Size = UDim2.new(1, 0, 0, 30),
 BackgroundTransparency = 1,
 Text = "",
 Parent = dropdownFrame
@@ -451,8 +523,8 @@ Parent = toggleButton
 })
 ThemeManager.Register(chevron, "ImageColor3", "SubText")
 local itemContainer = Creator.New("ScrollingFrame", {
-Size = UDim2.new(1, 0, 1, -40),
-Position = UDim2.new(0, 0, 0, 40),
+Size = UDim2.new(1, 0, 1, -30),
+Position = UDim2.new(0, 0, 0, 30),
 BackgroundTransparency = 1,
 ScrollBarThickness = 2,
 ScrollBarImageColor3 = ThemeManager.GetColor("Stroke"),
@@ -498,7 +570,7 @@ end
 refreshItems()
 toggleButton.MouseButton1Click:Connect(function()
 isOpen = not isOpen
-local targetSize = isOpen and UDim2.new(1, 0, 0, 160) or UDim2.new(1, 0, 0, 40)
+local targetSize = isOpen and UDim2.new(1, 0, 0, 150) or UDim2.new(1, 0, 0, 30)
 local targetRotation = isOpen and 180 or 0
 tweenService:Create(dropdownFrame, tweenInfo, {Size = targetSize}):Play()
 tweenService:Create(chevron, tweenInfo, {Rotation = targetRotation}):Play()
@@ -740,38 +812,62 @@ local Section = {}
 function Section.New(tabObj, sectionName)
 local sectionFrame = Creator.New("Frame", {
 Name = "Section_" .. sectionName,
-Size = UDim2.new(1, 0, 0, 0), 
-BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
-BackgroundTransparency = 1, 
+Size = UDim2.new(1, 0, 0, 0),
+BackgroundTransparency = 1,
 Parent = tabObj.Content
 }, {
 Creator.New("UIListLayout", {
-Padding = UDim.new(0, 8),
+Padding = UDim.new(0, 5),
 SortOrder = Enum.SortOrder.LayoutOrder
 })
 })
-local titleLabel = Creator.New("TextLabel", {
+local titleButton = Creator.New("TextButton", {
 Name = "SectionTitle",
 Size = UDim2.new(1, 0, 0, 20),
 BackgroundTransparency = 1,
-Text = sectionName,
-TextColor3 = ThemeManager.GetColor("Text"),
+Text = "- " .. sectionName,
+TextColor3 = ThemeManager.GetColor("Accent"),
 Font = ThemeManager.GetColor("TitleFont"),
-TextSize = 14,
+TextSize = 13,
 TextXAlignment = Enum.TextXAlignment.Left,
 Parent = sectionFrame
 })
-ThemeManager.Register(titleLabel, "TextColor3", "Text")
+ThemeManager.Register(titleButton, "TextColor3", "Accent")
+local contentFrame = Creator.New("Frame", {
+Name = "Content",
+Size = UDim2.new(1, 0, 0, 0),
+BackgroundTransparency = 1,
+Parent = sectionFrame
+}, {
+Creator.New("UIListLayout", {
+Padding = UDim.new(0, 6),
+SortOrder = Enum.SortOrder.LayoutOrder
+})
+})
+local isCollapsed = false
+titleButton.MouseButton1Click:Connect(function()
+isCollapsed = not isCollapsed
+contentFrame.Visible = not isCollapsed
+titleButton.Text = (isCollapsed and "+ " or "- ") .. sectionName
+end)
 local SectionObj = {
-Container = sectionFrame,
+Container = contentFrame,
 Tab = tabObj,
 Elements = {}
 }
 local lastY = -1
-sectionFrame.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-local newY = sectionFrame.UIListLayout.AbsoluteContentSize.Y
+contentFrame.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+local newY = contentFrame.UIListLayout.AbsoluteContentSize.Y
 if newY ~= lastY then
 lastY = newY
+contentFrame.Size = UDim2.new(1, 0, 0, newY)
+end
+end)
+local lastSectionY = -1
+sectionFrame.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+local newY = sectionFrame.UIListLayout.AbsoluteContentSize.Y
+if newY ~= lastSectionY then
+lastSectionY = newY
 sectionFrame.Size = UDim2.new(1, 0, 0, newY)
 end
 end)
@@ -831,7 +927,7 @@ local callback = options.Callback or function() end
 value = math.clamp(value, min, max)
 local sliderFrame = Creator.New("TextButton", {
 Name = "Slider_" .. name,
-Size = UDim2.new(1, 0, 0, 50),
+Size = UDim2.new(1, 0, 0, 36),
 BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
 AutoButtonColor = false,
 Text = "",
@@ -1057,7 +1153,7 @@ local state = options.Default or false
 local callback = options.Callback or function() end
 local toggleFrame = Creator.New("TextButton", {
 Name = "Toggle_" .. name,
-Size = UDim2.new(1, 0, 0, 35),
+Size = UDim2.new(1, 0, 0, 26),
 BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
 AutoButtonColor = false,
 Text = "",
@@ -1268,20 +1364,20 @@ end
 
 Modules["Default"] = function()
 local DefaultTheme = {
-Background = Color3.fromRGB(20, 20, 20),
-Sidebar = Color3.fromRGB(15, 15, 15),
-Topbar = Color3.fromRGB(15, 15, 15),
-ElementBackground = Color3.fromRGB(25, 25, 25),
-ElementHover = Color3.fromRGB(30, 30, 30),
-ElementPress = Color3.fromRGB(18, 18, 18),
-Accent = Color3.fromRGB(85, 170, 255), 
-Divider = Color3.fromRGB(35, 35, 35),
-Stroke = Color3.fromRGB(45, 45, 45),
+Background = Color3.fromRGB(24, 24, 24),
+Sidebar = Color3.fromRGB(32, 32, 32),
+Topbar = Color3.fromRGB(32, 32, 32),
+ElementBackground = Color3.fromRGB(42, 42, 42),
+ElementHover = Color3.fromRGB(52, 52, 52),
+ElementPress = Color3.fromRGB(30, 30, 30),
+Accent = Color3.fromRGB(66, 150, 250),
+Divider = Color3.fromRGB(55, 55, 55),
+Stroke = Color3.fromRGB(48, 48, 48),
 Text = Color3.fromRGB(240, 240, 240),
-SubText = Color3.fromRGB(150, 150, 150),
-Font = Enum.Font.Gotham,
-TitleFont = Enum.Font.GothamBold,
-CornerRadius = UDim.new(0, 6),
+SubText = Color3.fromRGB(160, 160, 160),
+Font = Enum.Font.Code,
+TitleFont = Enum.Font.Code,
+CornerRadius = UDim.new(0, 3),
 Padding = UDim.new(0, 10),
 Success = Color3.fromRGB(50, 200, 50),
 Warning = Color3.fromRGB(200, 150, 50),
