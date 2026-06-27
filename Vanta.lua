@@ -1,4 +1,4 @@
-﻿-- Vanta UI Library (Bundled)
+-- Vanta UI Library (Bundled)
 -- Created by Kuro
 
 local Modules = {}
@@ -1058,11 +1058,12 @@ function Slider.New(sectionObj, options)
     
     local userInputService = game:GetService("UserInputService")
     local dragging = false
+    local inputChangedConn
+    local inputEndedConn
 
     local function updateValue(input)
         local pos = math.clamp((input.Position.X - trackFrame.AbsolutePosition.X) / trackFrame.AbsoluteSize.X, 0, 1)
         value = min + ((max - min) * pos)
-        
         
         if options.Step then
             value = math.floor(value / options.Step + 0.5) * options.Step
@@ -1078,18 +1079,24 @@ function Slider.New(sectionObj, options)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             updateValue(input)
-        end
-    end)
-
-    userInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    userInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateValue(input)
+            
+            if not inputChangedConn then
+                inputChangedConn = userInputService.InputChanged:Connect(function(input2)
+                    if input2.UserInputType == Enum.UserInputType.MouseMovement or input2.UserInputType == Enum.UserInputType.Touch then
+                        updateValue(input2)
+                    end
+                end)
+            end
+            
+            if not inputEndedConn then
+                inputEndedConn = userInputService.InputEnded:Connect(function(input2)
+                    if input2.UserInputType == Enum.UserInputType.MouseButton1 or input2.UserInputType == Enum.UserInputType.Touch then
+                        dragging = false
+                        if inputChangedConn then inputChangedConn:Disconnect(); inputChangedConn = nil end
+                        if inputEndedConn then inputEndedConn:Disconnect(); inputEndedConn = nil end
+                    end
+                end)
+            end
         end
     end)
 
@@ -1602,5 +1609,4 @@ return Creator
 
 end
 
--- Initialize the library
 return custom_require("Main")
