@@ -295,7 +295,7 @@ Parent = footer
 ThemeManager.Register(footerText, "TextColor3", "SubText")
 local minimizeButton = Creator.New("TextButton", {
 Size = UDim2.new(0, 30, 0, 30),
-Position = UDim2.new(1, -40, 0.5, 0),
+Position = UDim2.new(1, -70, 0.5, 0),
 AnchorPoint = Vector2.new(0, 0.5),
 BackgroundTransparency = 1,
 Text = "-",
@@ -322,15 +322,40 @@ contentArea.Visible = true
 footer.Visible = true
 end
 end)
+local closeButton = Creator.New("TextButton", {
+Size = UDim2.new(0, 30, 0, 30),
+Position = UDim2.new(1, -40, 0.5, 0),
+AnchorPoint = Vector2.new(0, 0.5),
+BackgroundTransparency = 1,
+Text = "X",
+TextColor3 = ThemeManager.GetColor("SubText"),
+Font = Enum.Font.Code,
+TextSize = 20,
+Parent = topbar
+})
+ThemeManager.Register(closeButton, "TextColor3", "SubText")
+closeButton.MouseButton1Click:Connect(function()
+gui:Destroy()
+end)
 local dragging
 local dragInput
 local dragStart
 local startPos
 local function update(input)
 local delta = input.Position - dragStart
-mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local camera = workspace.CurrentCamera
+local viewportSize = camera.ViewportSize
+local sizeX = mainFrame.AbsoluteSize.X
+local sizeY = mainFrame.AbsoluteSize.Y
+local startAbsX = (startPos.X.Scale * viewportSize.X) + startPos.X.Offset
+local startAbsY = (startPos.Y.Scale * viewportSize.Y) + startPos.Y.Offset
+local newX = startAbsX + delta.X
+local newY = startAbsY + delta.Y
+newX = math.clamp(newX, sizeX / 2, viewportSize.X - (sizeX / 2))
+newY = math.clamp(newY, sizeY / 2, viewportSize.Y - (sizeY / 2))
+mainFrame.Position = UDim2.new(0, newX, 0, newY)
 end
-topbar.InputBegan:Connect(function(input)
+mainFrame.InputBegan:Connect(function(input)
 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 dragging = true
 dragStart = input.Position
@@ -346,7 +371,7 @@ end
 end)
 end
 end)
-topbar.InputChanged:Connect(function(input)
+mainFrame.InputChanged:Connect(function(input)
 if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 dragInput = input
 end
@@ -354,6 +379,11 @@ end)
 game:GetService("UserInputService").InputChanged:Connect(function(input)
 if input == dragInput and dragging then
 update(input)
+end
+end)
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+if input.KeyCode == Enum.KeyCode.RightShift then
+gui.Enabled = not gui.Enabled
 end
 end)
 local WindowObj = {
@@ -443,6 +473,188 @@ table.insert(sectionObj.Elements, ButtonObj)
 return ButtonObj
 end
 return Button
+
+end
+
+Modules["ColorPicker"] = function()
+local Creator = custom_require("Creator")
+local ThemeManager = custom_require("ThemeManager")
+local ColorPicker = {}
+function ColorPicker.New(sectionObj, options)
+options = options or {}
+local name = options.Name or "ColorPicker"
+local defaultColor = options.Default or Color3.fromRGB(255, 255, 255)
+local callback = options.Callback or function() end
+local h, s, v = defaultColor:ToHSV()
+local pickerFrame = Creator.New("Frame", {
+Name = "ColorPicker_" .. name,
+Size = UDim2.new(1, 0, 0, 30),
+BackgroundColor3 = ThemeManager.GetColor("ElementBackground"),
+Parent = sectionObj.Container,
+ClipsDescendants = true
+}, {
+Creator.New("UICorner", { CornerRadius = ThemeManager.GetColor("CornerRadius") }),
+Creator.New("UIStroke", {
+Color = ThemeManager.GetColor("Stroke"),
+Thickness = 1
+})
+})
+ThemeManager.Register(pickerFrame, "BackgroundColor3", "ElementBackground")
+local titleLabel = Creator.New("TextLabel", {
+Size = UDim2.new(1, -60, 1, 0),
+Position = UDim2.new(0, 10, 0, 0),
+BackgroundTransparency = 1,
+Text = name,
+TextColor3 = ThemeManager.GetColor("Text"),
+Font = ThemeManager.GetColor("Font"),
+TextSize = 13,
+TextXAlignment = Enum.TextXAlignment.Left,
+Parent = pickerFrame
+})
+ThemeManager.Register(titleLabel, "TextColor3", "Text")
+local colorPreview = Creator.New("Frame", {
+Size = UDim2.new(0, 40, 0, 20),
+Position = UDim2.new(1, -50, 0.5, 0),
+AnchorPoint = Vector2.new(0, 0.5),
+BackgroundColor3 = defaultColor,
+Parent = pickerFrame
+}, {
+Creator.New("UICorner", { CornerRadius = UDim.new(0, 4) }),
+Creator.New("UIStroke", { Color = ThemeManager.GetColor("Stroke"), Thickness = 1 })
+})
+local toggleButton = Creator.New("TextButton", {
+Size = UDim2.new(1, 0, 0, 30),
+BackgroundTransparency = 1,
+Text = "",
+Parent = pickerFrame
+})
+local dropdownArea = Creator.New("Frame", {
+Size = UDim2.new(1, 0, 0, 70),
+Position = UDim2.new(0, 0, 0, 30),
+BackgroundTransparency = 1,
+Parent = pickerFrame
+})
+local hueFrame = Creator.New("TextButton", {
+Size = UDim2.new(1, -20, 0, 15),
+Position = UDim2.new(0, 10, 0, 10),
+BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+Text = "",
+AutoButtonColor = false,
+Parent = dropdownArea
+}, {
+Creator.New("UICorner", { CornerRadius = UDim.new(0, 4) }),
+Creator.New("UIGradient", {
+Color = ColorSequence.new({
+ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)),
+ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+})
+})
+})
+local hueIndicator = Creator.New("Frame", {
+Size = UDim2.new(0, 4, 1, 4),
+Position = UDim2.new(h, 0, 0.5, 0),
+AnchorPoint = Vector2.new(0.5, 0.5),
+BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+Parent = hueFrame
+}, {
+Creator.New("UICorner", { CornerRadius = UDim.new(0, 2) }),
+Creator.New("UIStroke", { Color = Color3.fromRGB(0, 0, 0), Thickness = 1 })
+})
+local valFrame = Creator.New("TextButton", {
+Size = UDim2.new(1, -20, 0, 15),
+Position = UDim2.new(0, 10, 0, 35),
+BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+Text = "",
+AutoButtonColor = false,
+Parent = dropdownArea
+}, {
+Creator.New("UICorner", { CornerRadius = UDim.new(0, 4) }),
+Creator.New("UIGradient", {
+Color = ColorSequence.new({
+ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+})
+})
+})
+local valIndicator = Creator.New("Frame", {
+Size = UDim2.new(0, 4, 1, 4),
+Position = UDim2.new(v, 0, 0.5, 0),
+AnchorPoint = Vector2.new(0.5, 0.5),
+BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+Parent = valFrame
+}, {
+Creator.New("UICorner", { CornerRadius = UDim.new(0, 2) }),
+Creator.New("UIStroke", { Color = Color3.fromRGB(0, 0, 0), Thickness = 1 })
+})
+local function updateColor()
+local color = Color3.fromHSV(h, s, v)
+colorPreview.BackgroundColor3 = color
+valFrame.UIGradient.Color = ColorSequence.new({
+ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+ColorSequenceKeypoint.new(1, Color3.fromHSV(h, 1, 1))
+})
+callback(color)
+end
+updateColor()
+local userInputService = game:GetService("UserInputService")
+local hueDragging = false
+local valDragging = false
+local function updateHue(input)
+local pos = math.clamp((input.Position.X - hueFrame.AbsolutePosition.X) / hueFrame.AbsoluteSize.X, 0, 1)
+h = pos
+hueIndicator.Position = UDim2.new(pos, 0, 0.5, 0)
+updateColor()
+end
+local function updateVal(input)
+local pos = math.clamp((input.Position.X - valFrame.AbsolutePosition.X) / valFrame.AbsoluteSize.X, 0, 1)
+v = pos
+s = 1 
+valIndicator.Position = UDim2.new(pos, 0, 0.5, 0)
+updateColor()
+end
+hueFrame.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+hueDragging = true
+updateHue(input)
+end
+end)
+valFrame.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+valDragging = true
+updateVal(input)
+end
+end)
+userInputService.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+hueDragging = false
+valDragging = false
+end
+end)
+userInputService.InputChanged:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+if hueDragging then updateHue(input) end
+if valDragging then updateVal(input) end
+end
+end)
+local isOpen = false
+local tweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+toggleButton.MouseButton1Click:Connect(function()
+isOpen = not isOpen
+local targetSize = isOpen and UDim2.new(1, 0, 0, 100) or UDim2.new(1, 0, 0, 30)
+tweenService:Create(pickerFrame, tweenInfo, {Size = targetSize}):Play()
+end)
+local ColorPickerObj = {
+Container = pickerFrame
+}
+return ColorPickerObj
+end
+return ColorPicker
 
 end
 
@@ -901,7 +1113,15 @@ return Label.New(SectionObj, options)
 end
 function SectionObj.CreateKeybind(options)
 local Keybind = custom_require("Keybind")
-return Keybind.New(SectionObj, options)
+local keybindObj = Keybind.New(SectionObj, options)
+table.insert(SectionObj.Elements, keybindObj)
+return keybindObj
+end
+function SectionObj.CreateColorPicker(options)
+local ColorPicker = custom_require("ColorPicker")
+local cpObj = ColorPicker.New(SectionObj, options)
+table.insert(SectionObj.Elements, cpObj)
+return cpObj
 end
 function SectionObj.CreateProgressBar(options)
 local ProgressBar = custom_require("ProgressBar")
